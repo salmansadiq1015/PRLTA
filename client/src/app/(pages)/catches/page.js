@@ -29,8 +29,8 @@ const categoryOptions = [
   // "Coldwater",
   // "Pelagic",
   // "Deep-Sea",
-  "Domestic",
   "International",
+  "Local",
 ];
 
 export default function Catches() {
@@ -132,9 +132,7 @@ export default function Catches() {
           specie.toLowerCase().includes(lowercasedSearch) ||
           line_strenght.toLowerCase().includes(lowercasedSearch) ||
           fish_width.toLowerCase().includes(lowercasedSearch) ||
-          fish_length.toLowerCase().includes(lowercasedSearch) ||
-          score.toLowerCase().includes(lowercasedSearch) ||
-          rank.toLowerCase().includes(lowercasedSearch)
+          fish_length.toLowerCase().includes(lowercasedSearch)
         );
       });
     }
@@ -669,7 +667,7 @@ export default function Catches() {
 
           return (
             <div className="flex items-center justify-start cursor-pointer text-[13px] text-black w-full h-full truncate">
-              {line_strenght} Ibs
+              {line_strenght} Ib
             </div>
           );
         },
@@ -728,6 +726,36 @@ export default function Catches() {
           return (
             <div className="flex items-center justify-start cursor-pointer text-[13px] text-black w-full h-full truncate">
               {fish_width} Inch
+            </div>
+          );
+        },
+        filterFn: (row, columnId, filterValue) => {
+          const cellValue =
+            row.original[columnId]?.toString().toLowerCase() || "";
+
+          return cellValue.includes(filterValue.toLowerCase());
+        },
+      },
+      // weight
+      {
+        accessorKey: "weight",
+        minSize: 60,
+        maxSize: 130,
+        size: 120,
+        grow: false,
+        Header: ({ column }) => {
+          return (
+            <div className=" flex flex-col gap-[2px]">
+              <span className="ml-1 cursor-pointer ">Catch Weight</span>
+            </div>
+          );
+        },
+        Cell: ({ cell, row }) => {
+          const weight = row.original?.weight;
+
+          return (
+            <div className="flex items-center justify-start cursor-pointer text-[13px] text-black w-full h-full truncate">
+              {weight.toFixed(2)} lb
             </div>
           );
         },

@@ -15,7 +15,7 @@ const categoryOptions = [
   // "Coldwater",
   // "Pelagic",
   // "Deep-Sea",
-  "Domestic",
+  "Local",
   "International",
 ];
 
@@ -39,7 +39,7 @@ export default function CatchesModal({
   const [line_strenght, setLine_strenght] = useState("");
   const [fish_width, setFish_width] = useState("");
   const [fish_length, setFish_length] = useState("");
-  const [status, setStatus] = useState(false);
+  const [status, setStatus] = useState("pending");
   const [featured, setFeatured] = useState(false);
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
@@ -93,7 +93,10 @@ export default function CatchesModal({
   const offShoreSpecies = [
     "Aguja Azul (Blue Marlin)",
     "Aguja Blanca (White Marlin)",
-    "Pez Vela/Spearfish (Sailfish/Spearfish)",
+    // "Pez Vela/Spearfish (Sailfish/Spearfish)",
+    "Pez Vela",
+    "Spearfish",
+    "Stripe Marlin",
   ];
 
   const fetchUsers = async () => {
@@ -253,6 +256,8 @@ export default function CatchesModal({
     }
   };
 
+  const lineStrength = [2, 4, 6, 8, 10, 12, 16, 20, 30];
+
   return (
     <div className="w-full bg-white rounded-md overflow-hidden shadow h-[99%] flex flex-col overflow-y-auto shidden">
       <div className="flex items-center justify-between bg-customOrange px-4 py-2 sm:py-3 ">
@@ -384,7 +389,7 @@ export default function CatchesModal({
           </div>
           <div className="flex flex-col gap-1">
             <label className="block text-sm font-medium text-gray-700">
-              Shore
+              Region
             </label>
             <select
               value={shore}
@@ -479,17 +484,22 @@ export default function CatchesModal({
             <label className="block text-sm font-medium text-gray-700">
               Line Strenght
             </label>
-            <input
-              type="text"
+            <select
               value={line_strenght}
               onChange={(e) => setLine_strenght(e.target.value)}
               className={`${Style.input} w-full`}
-              placeholder="Line Strenght"
-            />
+            >
+              <option value="">Select Line Strenght</option>
+              {lineStrength?.map((line, index) => (
+                <option key={index} value={line}>
+                  {line} Ib
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex flex-col gap-1">
             <label className="block text-sm font-medium text-gray-700">
-              Fish Width
+              Fish Width (Girth, in Inches)
             </label>
             <input
               type="text"
@@ -505,7 +515,7 @@ export default function CatchesModal({
 
           <div className="flex flex-col gap-1 ">
             <label className="block text-sm font-medium text-gray-700">
-              Fish Length
+              Fish Length (In Inches)
             </label>
             <input
               type="text"

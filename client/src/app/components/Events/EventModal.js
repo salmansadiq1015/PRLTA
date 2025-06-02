@@ -59,8 +59,8 @@ export default function EventModal({
   const tournaments = [
     { name: "Pasadía Sábalos", date: "15 March 2025" },
     { name: "Pasadía Offshore del Income", date: "5 April 2025" },
-    { name: "Seminario de Reglas", date: "10 April 2025" },
-    { name: "Wine & Fishing Tales", date: "8 May 2025" },
+    // { name: "Seminario de Reglas", date: "10 April 2025" },
+    // { name: "Wine & Fishing Tales", date: "8 May 2025" },
     { name: "Father & Sons @ Salina’s", date: "31 May 2025" },
     { name: "Vente tú @ Culebra", date: "12 July 2025" },
     { name: "Pasadía Sábalos Diurno", date: "23 August 2025" },

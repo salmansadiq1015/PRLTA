@@ -31,12 +31,11 @@ export const createCatch = async (req, res) => {
     if (!name || !email) {
       return res.status(400).send({
         success: false,
-        message: "Name & Email is required!",
+        message: "Name & Email are required!",
       });
     }
 
-    const user = await authModel.findOne({ email: email }).select("name");
-
+    const user = await authModel.findOne({ email }).select("name");
     if (!user) {
       return res.status(400).send({
         success: false,
@@ -44,29 +43,90 @@ export const createCatch = async (req, res) => {
       });
     }
 
+    // Line class multipliers (inshore)
+    const lineMultipliers = {
+      2: 10.7,
+      4: 6.3,
+      6: 5.2,
+      8: 4.3,
+      10: 3.9,
+      12: 3.5,
+      16: 2.9,
+      20: 2.4,
+      30: 1.9,
+    };
+
+    // Offshore fixed points table
+    const offshorePoints = {
+      "Aguja Azul (Blue Marlin)": {
+        4: 1070,
+        6: 910,
+        8: 750,
+        12: 610,
+        16: 495,
+        20: 410,
+        30: 300,
+      },
+      "Aguja Blanca (White Marlin)": {
+        4: 535,
+        6: 450,
+        8: 360,
+        12: 290,
+        16: 245,
+        20: 205,
+        30: 160,
+      },
+      "Stripe Marlin": {
+        4: 535,
+        6: 450,
+        8: 360,
+        12: 290,
+        16: 245,
+        20: 205,
+        30: 160,
+      },
+      "Pez Vela": {
+        4: 430,
+        6: 360,
+        8: 285,
+        12: 235,
+        16: 200,
+        20: 165,
+        30: 130,
+      },
+      Spearfish: { 4: 430, 6: 360, 8: 285, 12: 235, 16: 200, 20: 165, 30: 130 },
+    };
+
+    const inshoreSpecies = ["Tarpon", "Snook", "Jackfish", "Ladyfish"];
+    const isInshore = shore?.toLowerCase() === "inshore";
+    const isValidInshoreSpecies = inshoreSpecies.includes(specie);
+
+    const girth = parseFloat(fish_width);
+    const length = parseFloat(fish_length);
+    const line = line_strenght.toString();
+
+    let weight = 0;
     let score = 0;
 
-    // Score Calculation
-    if (shore.toLowerCase() === "inshore") {
-      // Inshore: (Girth² × Length) ÷ 800 * line class multiplier
-      const girth = parseFloat(fish_width);
-      const length = parseFloat(fish_length);
-      const lineMultiplier = parseFloat(line_strenght); // e.g., 20 lb = 2.0
-
-      if (!isNaN(girth) && !isNaN(length) && !isNaN(lineMultiplier)) {
-        const weight = (girth ** 2 * length) / 800;
-        score = parseFloat((weight * lineMultiplier).toFixed(2));
+    if (isInshore && isValidInshoreSpecies && !isNaN(girth) && !isNaN(length)) {
+      // Inshore: Calculate weight and score
+      weight = (girth ** 2 * length) / 800;
+      const multiplier = lineMultipliers[line];
+      if (multiplier) {
+        score = parseFloat((weight * multiplier).toFixed(2));
       }
     } else {
-      // Offshore: You can assign fixed values based on species and line strength
-      // Example rule: Aguja Azul on 8 lb = 750 points
-      if (specie === "Aguja Azul" && line_strenght === "8") {
-        score = 750;
+      // Offshore: Use fixed score table
+      const offshoreSpecie = Object.keys(offshorePoints).find(
+        (s) => s.toLowerCase() === specie.toLowerCase()
+      );
+      if (offshoreSpecie && offshorePoints[offshoreSpecie][line]) {
+        score = offshorePoints[offshoreSpecie][line];
       } else {
-        score = 700;
+        score = 0; // Default fallback
       }
     }
-    //
+
     const catches = await catchModel.create({
       user: user._id,
       name,
@@ -87,13 +147,12 @@ export const createCatch = async (req, res) => {
       status,
       featured,
       score,
+      weight,
       latitude,
       longitude,
     });
 
-    // Pushing cateh In Event
     const tournament = await eventModel.findOne({ title: tournament_name });
-
     if (tournament) {
       tournament.catches.push(catches._id);
       await tournament.save();
@@ -101,20 +160,20 @@ export const createCatch = async (req, res) => {
 
     await activityModel.create({
       userId: user._id,
-      activity: `User ${user.name} has added catches for "${vessel_Name}".`,
+      activity: `User ${user.name} has added a catch for vessel "${vessel_Name}".`,
     });
 
-    res.status(200).send({
+    return res.status(200).send({
       success: true,
       message: "Catch created successfully!",
-      catches: catches,
+      catches,
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).send({
+    console.error("Catch creation error:", error);
+    return res.status(500).send({
       success: false,
-      message: "Error occured while post catch, please try again!",
-      error: error,
+      message: "Error occurred while posting catch.",
+      error,
     });
   }
 };
@@ -123,6 +182,7 @@ export const createCatch = async (req, res) => {
 export const updateCatch = async (req, res) => {
   try {
     const catchId = req.params.id;
+
     const {
       name,
       email,
@@ -141,26 +201,116 @@ export const updateCatch = async (req, res) => {
       fish_length,
       status,
       featured,
-      score,
       rank,
       latitude,
       longitude,
     } = req.body;
 
     const existingCatch = await catchModel.findById(catchId);
-
     if (!existingCatch) {
       return res.status(404).send({
         success: false,
         message: "Catch not found!",
       });
     }
+
     const user = await authModel
       .findOne({ email: email || existingCatch.email })
       .select("name");
 
-    const catches = await catchModel.findByIdAndUpdate(
-      { _id: existingCatch._id },
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found with this email!",
+      });
+    }
+
+    // Inshore logic
+    const inshoreSpecies = ["Tarpon", "Snook", "Jackfish", "Ladyfish"];
+    const lineMultipliers = {
+      2: 10.7,
+      4: 6.3,
+      6: 5.2,
+      8: 4.3,
+      10: 3.9,
+      12: 3.5,
+      16: 2.9,
+      20: 2.4,
+      30: 1.9,
+    };
+
+    // Offshore logic
+    const offshorePoints = {
+      "Aguja Azul (Blue Marlin)": {
+        4: 1070,
+        6: 910,
+        8: 750,
+        12: 610,
+        16: 495,
+        20: 410,
+        30: 300,
+      },
+      "Aguja Blanca (White Marlin)": {
+        4: 535,
+        6: 450,
+        8: 360,
+        12: 290,
+        16: 245,
+        20: 205,
+        30: 160,
+      },
+      "Stripe Marlin": {
+        4: 535,
+        6: 450,
+        8: 360,
+        12: 290,
+        16: 245,
+        20: 205,
+        30: 160,
+      },
+      "Pez Vela": {
+        4: 430,
+        6: 360,
+        8: 285,
+        12: 235,
+        16: 200,
+        20: 165,
+        30: 130,
+      },
+      Spearfish: { 4: 430, 6: 360, 8: 285, 12: 235, 16: 200, 20: 165, 30: 130 },
+    };
+
+    // Determine shore/specie context
+    const isInshore =
+      (shore || existingCatch.shore)?.toLowerCase() === "inshore";
+    const speciesName = specie || existingCatch.specie;
+    const isValidInshoreSpecies = inshoreSpecies.includes(speciesName);
+    const girth = parseFloat(fish_width || existingCatch.fish_width);
+    const length = parseFloat(fish_length || existingCatch.fish_length);
+    const line = (line_strenght || existingCatch.line_strenght)?.toString();
+
+    let weight = 0;
+    let score = 0;
+
+    if (isInshore && isValidInshoreSpecies && !isNaN(girth) && !isNaN(length)) {
+      weight = (girth ** 2 * length) / 800;
+      const multiplier = lineMultipliers[line];
+      if (multiplier) {
+        score = parseFloat((weight * multiplier).toFixed(2));
+      }
+    } else {
+      const offshoreSpecie = Object.keys(offshorePoints).find(
+        (s) => s.toLowerCase() === speciesName.toLowerCase()
+      );
+      if (offshoreSpecie && offshorePoints[offshoreSpecie][line]) {
+        score = offshorePoints[offshoreSpecie][line];
+      } else {
+        score = 0; // fallback
+      }
+    }
+
+    const updatedCatch = await catchModel.findByIdAndUpdate(
+      catchId,
       {
         user: user._id,
         name: name || existingCatch.name,
@@ -179,44 +329,43 @@ export const updateCatch = async (req, res) => {
         fish_width: fish_width || existingCatch.fish_width,
         fish_length: fish_length || existingCatch.fish_length,
         status: status || existingCatch.status,
-        featured: featured || existingCatch.featured,
-        score: score || existingCatch.score,
+        featured: featured ?? existingCatch.featured,
+        score,
         rank: rank || existingCatch.rank,
         latitude: latitude || existingCatch.latitude,
         longitude: longitude || existingCatch.longitude,
+        weight,
       },
       { new: true }
     );
 
+    // Sync tournament
     const tournament = await eventModel.findOne({
-      title: catches.tournament_name,
+      title: updatedCatch.tournament_name,
     });
 
-    if (tournament) {
-      const existingCatch = tournament.catches.includes(catches._id);
-
-      if (!existingCatch) {
-        tournament.catches.push(catches._id);
-        await tournament.save();
-      }
+    if (tournament && !tournament.catches.includes(updatedCatch._id)) {
+      tournament.catches.push(updatedCatch._id);
+      await tournament.save();
     }
 
+    // Log activity
     await activityModel.create({
       userId: req.user.user._id,
-      activity: `User ${req.user.user.name} has update catches "${catches.vessel_Name}".`,
+      activity: `User ${req.user.user.name} has updated catch for "${updatedCatch.vessel_Name}".`,
     });
 
-    res.status(200).send({
+    return res.status(200).send({
       success: true,
       message: "Catch updated successfully!",
-      catches: catches,
+      catches: updatedCatch,
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).send({
+    console.error("Update catch error:", error);
+    return res.status(500).send({
       success: false,
-      message: "Error occured while update catch, please try again!",
-      error: error,
+      message: "Error occurred while updating catch.",
+      error,
     });
   }
 };

@@ -14,7 +14,7 @@ const catchSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, "Email is required"],
-      unique: false,
+      unique: true,
       match: [
         /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
         "Please enter a valid email address",
@@ -96,6 +96,10 @@ const catchSchema = new mongoose.Schema(
     longitude: {
       type: String,
       trim: true,
+    },
+    weight: {
+      type: Number,
+      default: 0,
     },
   },
   { timestamps: true }
