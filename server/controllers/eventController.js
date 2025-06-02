@@ -187,13 +187,14 @@ export const getUpcomingEvents = async (req, res) => {
       .sort({ startDate: 1 })
       .populate({
         path: "catches",
-        select: "name email vessel_Name score rank user",
+        select:
+          "name email vessel_Name score rank user category specie line_strenght weight shore ",
         populate: {
           path: "user",
-          select: "name email avatar rank points",
+          select: "name email avatar ",
         },
       })
-      .populate("winners", "name email score rank vessel_Name images");
+      .populate("winners", "name email score rank vessel_Name ");
 
     res.status(200).send({
       success: true,
